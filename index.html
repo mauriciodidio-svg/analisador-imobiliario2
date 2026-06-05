@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador Imobiliário - Cloud</title>
+    
+    <!-- Firebase Compat (versão com compatibilidade) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+    
+    <!-- CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0f172a;
+            color: #e5e7eb;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-bottom: 3px solid #fbbf24;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            color: #fbbf24;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header-subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #10b981;
+        }
+
+        .status-dot.offline {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 15px;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            background: #1e293b;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            background: #334155;
+            color: #cbd5e1;
+        }
+
+        .tab-btn.active {
+            background: #fbbf24;
+            color: #0f172a;
+            box-shadow: 0 -4px 12px rgba(251, 191, 36, 0.2);
+        }
+
+        .content {
+            padding: 40px 20px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fbbf24;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            color: #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #fbbf24;
+            color: #0f172a;
+        }
+
+        .btn-primary:hover {
+            background: #f59e0b;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(251, 191, 36, 0.2);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, #1e293b 0%, #0f4c75 100%);
+            border-left: 5px solid #fbbf24;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .result-values {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .value-card {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #334155;
+            text-align: center;
+        }
+
+        .value-card h3 {
+            color: #94a3b8;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .value-card .price {
+            color: #fbbf24;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #334155;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #fbbf24;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(251, 191, 36, 0.15);
+        }
+
+        .card-image {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #0f4c75 0%, #1e293b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-title {
+            color: #fbbf24;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .card-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .card-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #334155;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .table th {
+            background: #0f4c75;
+            color: #fbbf24;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #334155;
+        }
+
+        .table td {
+            padding: 15px;
+            border-bottom: 1px solid #334155;
+            color: #cbd5e1;
+        }
+
+        .table tr:hover {
+            background: #0f172a;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state h2 {
+            color: #94a3b8;
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.success {
+            background: #10b981;
+            color: white;
+            display: block;
+        }
+
+        .alert.error {
+            background: #ef4444;
+            color: white;
+            display: block;
+        }
+
+        .alert.info {
+            background: #3b82f6;
+            color: white;
+            display: block;
+        }
+
+        .alert.warning {
+            background: #f59e0b;
+            color: white;
+            display: block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #0f4c75;
+            color: #fbbf24;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        h2 {
+            color: #fbbf24;
+            margin-bottom: 30px;
+            font-size: 24px;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            color: #cbd5e1;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        .info-text {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #64748b;
+            border-top: 1px solid #334155;
+            margin-top: 40px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #fbbf24;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .setup-warning {
+            background: #f59e0b;
+            color: #000;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .setup-warning h3 {
+            color: #000;
+            margin-bottom: 10px;
+        }
+
+        .setup-warning code {
+            background: rgba(0,0,0,0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>🏠 Analisador Imobiliário Cloud</h1>
+                    <p class="header-subtitle">Sincronizado na nuvem • Acesse de qualquer lugar</p>
+                </div>
+                <div class="header-status" id="statusConexao">
+                    <div class="status-dot offline"></div>
+                    <span id="statusTexto">Conectando...</span>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="openTab('estimativa')">📈 Estimativa</button>
+                <button class="tab-btn" onclick="openTab('cadastro')">➕ Cadastro</button>
+                <button class="tab-btn" onclick="openTab('banco')">🏠 Banco de Dados</button>
+                <button class="tab-btn" onclick="openTab('simulacoes')">📋 Simulações</button>
+                <button class="tab-btn" onclick="openTab('backup')">💾 Backup</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="content">
+        <div class="container">
+            <!-- SETUP (se Firebase não configurado) -->
+            <div id="setupTab" class="tab-content">
+                <h2>⚙️ Configuração do Firebase</h2>
+                
+                <div class="setup-warning">
+                    <h3>🔧 Primeira vez? Configure o Firebase</h3>
+                    <p style="margin-bottom: 15px;">
+                        Para sincronizar dados na nuvem, você precisa criar um projeto Firebase gratuito.
+                    </p>
+                    
+                    <h4 style="margin-top: 20px; margin-bottom: 10px;">📝 Passo 1: Criar Projeto</h4>
+                    <p style="margin-bottom: 10px;">
+                        1. Acesse <strong>https://console.firebase.google.com</strong><br>
+                        2. Clique em "Adicionar projeto"<br>
+                        3. Nome: <code>analisador-imobiliario</code><br>
+                        4. Desabilite Google Analytics<br>
+                        5. Clique "Criar projeto"
+                    </p>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 10px;">🔑 Passo 2: Pegar Credenciais</h4>
+                    <p style="margin-bottom: 10px;">
+                        1. No painel do Firebase, clique no ícone ⚙️ (Configurações do Projeto)<br>
+                        2. Abra a aba "Geral"<br>
+                        3. Role até "Seus aplicativos"<br>
+                        4. Selecione "Web" e copie o objeto de configuração
+                    </p>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 10px;">🗄️ Passo 3: Ativar Realtime Database</h4>
+                    <p style="margin-bottom: 10px;">
+                        1. No menu lateral, vá para "Realtime Database"<br>
+                        2. Clique "Criar banco de dados"<br>
+                        3. Localização: <code>South America (São Paulo)</code><br>
+                        4. Modo de segurança: <code>Iniciar em modo de teste</code><br>
+                        5. Clique "Ativar"
+                    </p>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 10px;">📋 Passo 4: Cole as Credenciais</h4>
+                </div>
+
+                <div class="form-group">
+                    <label for="firebaseConfig">Cole aqui o objeto de configuração Firebase (JSON):</label>
+                    <textarea id="firebaseConfig" style="height: 250px; font-family: monospace; font-size: 12px;" placeholder='{"apiKey": "...", "authDomain": "...", ...}'></textarea>
+                    <div class="info-text" style="margin-top: 10px;">
+                        Exemplo: copie tudo entre { e } da configuração do Firebase
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="salvarConfigFirebase()">✅ Salvar Configuração</button>
+                <div id="alertSetup" class="alert"></div>
+            </div>
+
+            <!-- ESTIMATIVA -->
+            <div id="estimativa" class="tab-content active">
+                <h2>📈 Calcular Estimativa</h2>
+                <div id="alertEstimativa" class="alert"></div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="estCity">Cidade *</label>
+                        <input type="text" id="estCity" placeholder="Ex: Porto Alegre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="estArea">Área (m²) *</label>
+                        <input type="number" id="estArea" placeholder="Ex: 150" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="estType">Tipo de Imóvel</label>
+                        <select id="estType">
+                            <option value="baixo">Baixo Padrão</option>
+                            <option value="medio" selected>Médio Padrão</option>
+                            <option value="alto">Alto Padrão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Diferenciais</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="estPool">
+                                <label for="estPool" style="margin: 0;">Piscina</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="estBBQ">
+                                <label for="estBBQ" style="margin: 0;">Churrasqueira</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="calcularEstimativa()">🔍 Calcular Estimativa</button>
+
+                <div id="resultadoEstimativa" class="hidden">
+                    <div class="result-box">
+                        <h3>Resultado da Estimativa</h3>
+                        <div id="infoEstimativa" style="color: #cbd5e1; margin-bottom: 20px;"></div>
+                        <div class="result-values">
+                            <div class="value-card">
+                                <h3>Valor Mínimo</h3>
+                                <div class="price" id="priceMin">R$ 0</div>
+                            </div>
+                            <div class="value-card">
+                                <h3>Valor Médio</h3>
+                                <div class="price" id="priceAvg">R$ 0</div>
+                            </div>
+                            <div class="value-card">
+                                <h3>Valor Máximo</h3>
+                                <div class="price" id="priceMax">R$ 0</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button class="btn btn-success" onclick="exportarPDF()">📄 Exportar PDF</button>
+                            <button class="btn btn-secondary" onclick="salvarSimulacao()">💾 Salvar Simulação</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CADASTRO -->
+            <div id="cadastro" class="tab-content">
+                <h2>➕ Cadastrar Imóvel</h2>
+                <div id="alertCadastro" class="alert"></div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cadCity">Cidade *</label>
+                        <input type="text" id="cadCity" placeholder="Ex: Porto Alegre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadCondominio">Condomínio</label>
+                        <input type="text" id="cadCondominio" placeholder="Ex: Condomínio Residencial">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cadArea">Área (m²) *</label>
+                        <input type="number" id="cadArea" placeholder="Ex: 120" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadValor">Valor (R$) *</label>
+                        <input type="number" id="cadValor" placeholder="Ex: 450000" min="1" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cadType">Tipo de Imóvel</label>
+                        <select id="cadType">
+                            <option value="baixo">Baixo Padrão</option>
+                            <option value="medio" selected>Médio Padrão</option>
+                            <option value="alto">Alto Padrão</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadFonte">Fonte</label>
+                        <input type="text" id="cadFonte" placeholder="Ex: Imobiliária XYZ">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cadLink">Link</label>
+                        <input type="url" id="cadLink" placeholder="https://exemplo.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Diferenciais</label>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="cadPool">
+                                <label for="cadPool" style="margin: 0;">Piscina</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="cadBBQ">
+                                <label for="cadBBQ" style="margin: 0;">Churrasqueira</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="cadastrarImovel()">✅ Cadastrar Imóvel</button>
+            </div>
+
+            <!-- BANCO DE DADOS -->
+            <div id="banco" class="tab-content">
+                <h2>🏠 Banco de Dados</h2>
+                <div id="alertBanco" class="alert"></div>
+
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="filtrarPorCidade()">🔍 Filtrar por Cidade</button>
+                    <button class="btn btn-danger" onclick="limparTudo()">🗑️ Limpar Tudo</button>
+                </div>
+
+                <div id="galeriaImoveis" class="gallery"></div>
+                <div id="emptyBanco" class="empty-state hidden">
+                    <h2>📭 Nenhum imóvel cadastrado</h2>
+                    <p>Comece cadastrando imóveis na aba "Cadastro"</p>
+                </div>
+            </div>
+
+            <!-- SIMULAÇÕES -->
+            <div id="simulacoes" class="tab-content">
+                <h2>📋 Histórico de Simulações</h2>
+                <div id="alertSimulacoes" class="alert"></div>
+
+                <button class="btn btn-danger" onclick="limparSimulacoes()" style="margin-bottom: 20px;">🗑️ Limpar Todas</button>
+
+                <div id="tabelaSimulacoes"></div>
+                <div id="emptySimulacoes" class="empty-state hidden">
+                    <h2>📊 Nenhuma simulação salva</h2>
+                    <p>Calcule estimativas e salve as simulações para acompanhamento</p>
+                </div>
+            </div>
+
+            <!-- BACKUP -->
+            <div id="backup" class="tab-content">
+                <h2>💾 Backup de Dados</h2>
+                <div id="alertBackup" class="alert"></div>
+
+                <p style="margin-bottom: 20px; color: #cbd5e1;">
+                    Exporte seus dados em Excel para backup ou análise adicional. Você pode importar esses dados em outro computador.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 2px solid #334155;">
+                        <h3>📊 Exportar Imóveis</h3>
+                        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">Baixe todos os imóveis cadastrados em Excel</p>
+                        <button class="btn btn-success" onclick="exportarExcelImoveis()">📊 Exportar Imóveis</button>
+                    </div>
+
+                    <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 2px solid #334155;">
+                        <h3>📈 Exportar Simulações</h3>
+                        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">Baixe todas as simulações realizadas em Excel</p>
+                        <button class="btn btn-success" onclick="exportarExcelSimulacoes()">📈 Exportar Simulações</button>
+                    </div>
+
+                    <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 2px solid #334155;">
+                        <h3>📦 Backup Completo</h3>
+                        <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">Baixe todos os dados em um único arquivo JSON</p>
+                        <button class="btn btn-success" onclick="exportarBackupCompleto()">💾 Backup Completo</button>
+                    </div>
+                </div>
+
+                <div style="background: #1e293b; padding: 20px; border-radius: 8px; border: 2px solid #334155; margin-bottom: 20px;">
+                    <h3>📥 Importar Backup</h3>
+                    <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;">Importe dados de um backup anterior</p>
+                    <input type="file" id="importFile" accept=".json" style="margin-bottom: 10px;">
+                    <button class="btn btn-secondary" onclick="importarBackup()">📥 Importar</button>
+                </div>
+
+                <div style="background: #0f4c75; padding: 15px; border-radius: 8px; border-left: 4px solid #fbbf24;">
+                    <h4 style="color: #fbbf24; margin-bottom: 10px;">💡 Dicas de Backup</h4>
+                    <ul style="color: #cbd5e1; font-size: 13px; line-height: 2;">
+                        <li>✅ Faça backup regularmente (semanal/mensal)</li>
+                        <li>✅ Guarde em local seguro (Google Drive, Dropbox, pendrive)</li>
+                        <li>✅ Dados são sincronizados automaticamente na nuvem</li>
+                        <li>✅ Mesmo assim, ter backup local é importante</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2024 Analisador Imobiliário Cloud | Dados sincronizados com Firebase</p>
+    </footer>
+
+    <!-- Modal para filtro de cidade -->
+    <div id="modalFiltro" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1e293b; padding: 30px; border-radius: 8px; min-width: 300px; border: 2px solid #fbbf24;">
+            <h3 style="margin-bottom: 20px;">Filtrar por Cidade</h3>
+            <select id="filtroCity" style="margin-bottom: 20px;">
+                <option value="">-- Todas as cidades --</option>
+            </select>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="aplicarFiltro()">Filtrar</button>
+                <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURAÇÃO FIREBASE ==========
+        let db = null;
+        let firebaseConfigured = false;
+
+        function inicializarFirebase() {
+            const config = localStorage.getItem('firebaseConfig');
+            
+            if (!config) {
+                document.getElementById('setupTab').classList.add('active');
+                document.getElementById('estimativa').classList.remove('active');
+                atualizarStatusConexao(false, 'Firebase não configurado');
+                return false;
+            }
+
+            try {
+                const firebaseConfig = JSON.parse(config);
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                firebaseConfigured = true;
+                sincronizerComFirebase();
+                atualizarStatusConexao(true, 'Conectado');
+                return true;
+            } catch (e) {
+                console.error('Erro ao inicializar Firebase:', e);
+                atualizarStatusConexao(false, 'Erro na conexão');
+                return false;
+            }
+        }
+
+        function salvarConfigFirebase() {
+            const config = document.getElementById('firebaseConfig').value.trim();
+            const alert = document.getElementById('alertSetup');
+
+            if (!config) {
+                mostrarAlerta(alert, 'Cole a configuração do Firebase', 'error');
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(config);
+                if (!parsed.apiKey || !parsed.projectId) {
+                    throw new Error('Configuração inválida');
+                }
+                localStorage.setItem('firebaseConfig', config);
+                mostrarAlerta(alert, '✅ Firebase configurado! Recarregando...', 'success');
+                setTimeout(() => location.reload(), 2000);
+            } catch (e) {
+                mostrarAlerta(alert, '❌ JSON inválido. Verifique a configuração', 'error');
+            }
+        }
+
+        // ========== SINCRONIZAÇÃO FIREBASE ==========
+        function sincronizerComFirebase() {
+            if (!db) return;
+
+            // Sincronizar imóveis
+            db.ref('imoveis').on('value', (snapshot) => {
+                const dados = snapshot.val();
+                if (dados) {
+                    localStorage.setItem('imoveis', JSON.stringify(Object.values(dados)));
+                    renderizarGaleria();
+                }
+            });
+
+            // Sincronizar simulações
+            db.ref('simulacoes').on('value', (snapshot) => {
+                const dados = snapshot.val();
+                if (dados) {
+                    localStorage.setItem('simulacoes', JSON.stringify(Object.values(dados)));
+                    renderizarSimulacoes();
+                }
+            });
+
+            // Escutar mudanças de conexão
+            db.ref('.info/connected').on('value', (snapshot) => {
+                if (snapshot.val()) {
+                    atualizarStatusConexao(true, 'Online');
+                } else {
+                    atualizarStatusConexao(false, 'Offline');
+                }
+            });
+        }
+
+        function atualizarStatusConexao(online, texto) {
+            const dot = document.querySelector('.status-dot');
+            const textEl = document.getElementById('statusTexto');
+            
+            if (dot) {
+                dot.classList.remove('online', 'offline');
+                dot.classList.add(online ? 'online' : 'offline');
+            }
+            if (textEl) {
+                textEl.textContent = texto;
+            }
+        }
+
+        // ========== GERENCIAMENTO DE DADOS ==========
+        function obterImoveis() {
+            return JSON.parse(localStorage.getItem('imoveis')) || [];
+        }
+
+        function salvarImovelFirebase(imovel) {
+            if (!db) {
+                salvarImoveisLocal([...obterImoveis(), imovel]);
+                return;
+            }
+            db.ref(`imoveis/${imovel.id}`).set(imovel);
+        }
+
+        function deletarImoveisFirebase(id) {
+            if (!db) return;
+            db.ref(`imoveis/${id}`).remove();
+        }
+
+        function salvarImoveisLocal(imoveis) {
+            localStorage.setItem('imoveis', JSON.stringify(imoveis));
+        }
+
+        function obterSimulacoes() {
+            return JSON.parse(localStorage.getItem('simulacoes')) || [];
+        }
+
+        function salvarSimulacaoFirebase(simulacao) {
+            if (!db) {
+                const sims = obterSimulacoes();
+                sims.push(simulacao);
+                localStorage.setItem('simulacoes', JSON.stringify(sims));
+                renderizarSimulacoes();
+                return;
+            }
+            db.ref(`simulacoes/${simulacao.id}`).set(simulacao);
+        }
+
+        function deletarSimulacaoFirebase(id) {
+            if (!db) return;
+            db.ref(`simulacoes/${id}`).remove();
+        }
+
+        // ========== ESTIMATIVA ==========
+        function calcularEstimativa() {
+            const cidade = document.getElementById('estCity').value.trim();
+            const area = parseFloat(document.getElementById('estArea').value);
+            const tipo = document.getElementById('estType').value;
+            const piscina = document.getElementById('estPool').checked;
+            const churrasqueira = document.getElementById('estBBQ').checked;
+
+            const alert = document.getElementById('alertEstimativa');
+
+            if (!cidade || !area) {
+                mostrarAlerta(alert, 'Preencha cidade e área', 'error');
+                return;
+            }
+
+            const imoveis = obterImoveis().filter(i => i.cidade.toLowerCase() === cidade.toLowerCase());
+
+            if (imoveis.length === 0) {
+                mostrarAlerta(alert, `Nenhum comparável encontrado em ${cidade}`, 'error');
+                return;
+            }
+
+            const imoveisFiltrados = imoveis.filter(i => i.tipo === tipo || true);
+            const precosM2 = imoveisFiltrados.map(i => i.valor / i.area);
+            const mediaM2 = precosM2.reduce((a, b) => a + b) / precosM2.length;
+
+            let ajuste = 1;
+            if (piscina) ajuste += 0.08;
+            if (churrasqueira) ajuste += 0.05;
+
+            const precoMedio = (mediaM2 * area) * ajuste;
+            const desvio = Math.sqrt(precosM2.reduce((sum, p) => sum + Math.pow(p - mediaM2, 2), 0) / precosM2.length);
+            const precoMin = ((mediaM2 - desvio) * area) * ajuste;
+            const precoMax = ((mediaM2 + desvio) * area) * ajuste;
+
+            const min = Math.round(precoMin);
+            const med = Math.round(precoMedio);
+            const max = Math.round(precoMax);
+
+            document.getElementById('priceMin').textContent = formatarMoeda(min);
+            document.getElementById('priceAvg').textContent = formatarMoeda(med);
+            document.getElementById('priceMax').textContent = formatarMoeda(max);
+
+            const info = `
+                <strong>Imóvel em ${cidade}</strong><br>
+                Área: ${area}m² | Tipo: ${tipo} | Comparáveis: ${imoveis.length}<br>
+                Preço médio/m²: ${formatarMoeda(Math.round(mediaM2))}<br>
+                Ajustes: ${piscina ? '+8% piscina' : ''} ${churrasqueira ? '+5% churrasqueira' : ''}
+            `;
+            document.getElementById('infoEstimativa').innerHTML = info;
+
+            window.ultimaEstimativa = {
+                cidade, area, tipo, piscina, churrasqueira,
+                min, med, max, comparaveis: imoveis.length,
+                data: new Date().toLocaleString('pt-BR')
+            };
+
+            document.getElementById('resultadoEstimativa').classList.remove('hidden');
+            mostrarAlerta(alert, 'Estimativa calculada com sucesso!', 'success');
+        }
+
+        // ========== CADASTRO ==========
+        function cadastrarImovel() {
+            const cidade = document.getElementById('cadCity').value.trim();
+            const condominio = document.getElementById('cadCondominio').value.trim();
+            const area = parseFloat(document.getElementById('cadArea').value);
+            const valor = parseFloat(document.getElementById('cadValor').value);
+            const tipo = document.getElementById('cadType').value;
+            const fonte = document.getElementById('cadFonte').value.trim();
+            const link = document.getElementById('cadLink').value.trim();
+            const piscina = document.getElementById('cadPool').checked;
+            const churrasqueira = document.getElementById('cadBBQ').checked;
+
+            const alert = document.getElementById('alertCadastro');
+
+            if (!cidade || !area || !valor) {
+                mostrarAlerta(alert, 'Preencha os campos obrigatórios (*)', 'error');
+                return;
+            }
+
+            const imovel = {
+                id: Date.now() + Math.random(),
+                cidade, condominio, area, valor, tipo, fonte, link, piscina, churrasqueira,
+                data: new Date().toLocaleDateString()
+            };
+
+            salvarImovelFirebase(imovel);
+
+            // Limpar form
+            document.getElementById('cadCity').value = '';
+            document.getElementById('cadCondominio').value = '';
+            document.getElementById('cadArea').value = '';
+            document.getElementById('cadValor').value = '';
+            document.getElementById('cadType').value = 'medio';
+            document.getElementById('cadFonte').value = '';
+            document.getElementById('cadLink').value = '';
+            document.getElementById('cadPool').checked = false;
+            document.getElementById('cadBBQ').checked = false;
+
+            mostrarAlerta(alert, 'Imóvel cadastrado com sucesso!', 'success');
+        }
+
+        // ========== GALERIA ==========
+        function renderizarGaleria() {
+            const galeria = document.getElementById('galeriaImoveis');
+            const empty = document.getElementById('emptyBanco');
+            const imoveis = obterImoveis();
+
+            if (imoveis.length === 0) {
+                galeria.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            galeria.innerHTML = imoveis.map(i => `
+                <div class="card">
+                    <div class="card-image">
+                        ${i.tipo === 'alto' ? '🏰' : i.tipo === 'medio' ? '🏠' : '🏘️'}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title">${i.cidade}</div>
+                        <div class="card-info">
+                            <span>📍 ${i.condominio || 'S/ condomínio'}</span>
+                        </div>
+                        <div class="card-info">
+                            <span>📐 ${i.area}m²</span>
+                            <span>R$ ${formatarMoeda(i.valor)}</span>
+                        </div>
+                        <div class="card-info">
+                            <span>💰 R$${Math.round(i.valor/i.area)}/m²</span>
+                        </div>
+                        ${i.piscina || i.churrasqueira ? `
+                            <div style="margin-top: 10px;">
+                                ${i.piscina ? '<span class="badge">🏊 Piscina</span>' : ''}
+                                ${i.churrasqueira ? '<span class="badge">🍖 Churrasqueira</span>' : ''}
+                            </div>
+                        ` : ''}
+                        <div class="card-footer">
+                            ${i.link ? `<a href="${i.link}" target="_blank" class="btn btn-secondary" style="text-decoration: none; flex: 1;">🔗 Link</a>` : ''}
+                            <button class="btn btn-danger" onclick="deletarImovel('${i.id}')">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deletarImovel(id) {
+            if (confirm('Tem certeza que deseja deletar este imóvel?')) {
+                deletarImoveisFirebase(id);
+                let imoveis = obterImoveis();
+                imoveis = imoveis.filter(i => i.id != id);
+                salvarImoveisLocal(imoveis);
+                renderizarGaleria();
+                mostrarAlerta(document.getElementById('alertBanco'), 'Imóvel deletado!', 'success');
+            }
+        }
+
+        // ========== SIMULAÇÕES ==========
+        function salvarSimulacao() {
+            if (!window.ultimaEstimativa) {
+                mostrarAlerta(document.getElementById('alertEstimativa'), 'Calcule uma estimativa primeiro', 'error');
+                return;
+            }
+
+            const sim = {
+                id: Date.now() + Math.random(),
+                ...window.ultimaEstimativa
+            };
+
+            salvarSimulacaoFirebase(sim);
+            mostrarAlerta(document.getElementById('alertEstimativa'), 'Simulação salva!', 'success');
+        }
+
+        function renderizarSimulacoes() {
+            const tabela = document.getElementById('tabelaSimulacoes');
+            const empty = document.getElementById('emptySimulacoes');
+            const simulacoes = obterSimulacoes();
+
+            if (simulacoes.length === 0) {
+                tabela.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            tabela.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Cidade</th>
+                            <th>Área (m²)</th>
+                            <th>Valor Mínimo</th>
+                            <th>Valor Médio</th>
+                            <th>Valor Máximo</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${simulacoes.map((s) => `
+                            <tr>
+                                <td>${s.data}</td>
+                                <td>${s.cidade}</td>
+                                <td>${s.area}m²</td>
+                                <td>${formatarMoeda(s.min)}</td>
+                                <td><strong>${formatarMoeda(s.med)}</strong></td>
+                                <td>${formatarMoeda(s.max)}</td>
+                                <td><button class="btn btn-danger" onclick="deletarSimulacao('${s.id}')">🗑️</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function deletarSimulacao(id) {
+            if (confirm('Deletar esta simulação?')) {
+                deletarSimulacaoFirebase(id);
+                let simulacoes = obterSimulacoes();
+                simulacoes = simulacoes.filter(s => s.id != id);
+                localStorage.setItem('simulacoes', JSON.stringify(simulacoes));
+                renderizarSimulacoes();
+            }
+        }
+
+        function limparSimulacoes() {
+            if (confirm('Deletar todas as simulações?')) {
+                localStorage.setItem('simulacoes', JSON.stringify([]));
+                if (db) {
+                    db.ref('simulacoes').remove();
+                }
+                renderizarSimulacoes();
+            }
+        }
+
+        // ========== EXPORTAÇÕES ==========
+        function exportarPDF() {
+            if (!window.ultimaEstimativa) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const est = window.ultimaEstimativa;
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            let yPosition = 20;
+
+            doc.setFillColor(15, 23, 42);
+            doc.rect(0, 0, pageWidth, 30, 'F');
+            
+            doc.setTextColor(251, 191, 36);
+            doc.setFontSize(20);
+            doc.text('🏠 Analisador Imobiliário', pageWidth / 2, 15, { align: 'center' });
+            
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(10);
+            doc.text('Estimativa de Valor de Imóvel', pageWidth / 2, 25, { align: 'center' });
+
+            yPosition = 40;
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(11);
+            doc.text(`Localidade: ${est.cidade}`, 20, yPosition);
+            yPosition += 8;
+            doc.text(`Área: ${est.area} m²`, 20, yPosition);
+            yPosition += 8;
+            doc.text(`Tipo: ${est.tipo}`, 20, yPosition);
+            yPosition += 8;
+            doc.text(`Comparáveis analisados: ${est.comparaveis}`, 20, yPosition);
+            yPosition += 8;
+            doc.text(`Data: ${est.data}`, 20, yPosition);
+            yPosition += 15;
+
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text('RESULTADO DA ESTIMATIVA', 20, yPosition);
+            yPosition += 12;
+
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(10);
+            
+            doc.setTextColor(251, 191, 36);
+            doc.text('Valor Mínimo', 30, yPosition);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(formatarMoeda(est.min), 30, yPosition + 7);
+            
+            yPosition += 15;
+            
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(251, 191, 36);
+            doc.text('Valor Médio', 30, yPosition);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(formatarMoeda(est.med), 30, yPosition + 7);
+            
+            yPosition += 15;
+            
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(251, 191, 36);
+            doc.text('Valor Máximo', 30, yPosition);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(formatarMoeda(est.max), 30, yPosition + 7);
+
+            yPosition += 20;
+
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Esta estimativa é baseada em análise de comparáveis do mercado.', 20, yPosition);
+            yPosition += 5;
+            doc.text('Para uma avaliação mais precisa, consulte um profissional especializado.', 20, yPosition);
+
+            doc.save(`estimativa_${est.cidade}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
+            mostrarAlerta(document.getElementById('alertEstimativa'), 'PDF exportado!', 'success');
+        }
+
+        function exportarExcelImoveis() {
+            const imoveis = obterImoveis();
+
+            if (imoveis.length === 0) {
+                mostrarAlerta(document.getElementById('alertBackup'), 'Nenhum imóvel para exportar', 'error');
+                return;
+            }
+
+            const dados = imoveis.map(i => ({
+                'Cidade': i.cidade,
+                'Condomínio': i.condominio || '-',
+                'Área (m²)': i.area,
+                'Valor (R$)': i.valor,
+                'R$/m²': Math.round(i.valor / i.area),
+                'Tipo': i.tipo,
+                'Piscina': i.piscina ? 'Sim' : 'Não',
+                'Churrasqueira': i.churrasqueira ? 'Sim' : 'Não',
+                'Fonte': i.fonte || '-',
+                'Data': i.data
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Imóveis');
+
+            ws['!cols'] = [
+                { wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 15 },
+                { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 15 },
+                { wch: 15 }, { wch: 12 }
+            ];
+
+            XLSX.writeFile(wb, `imoveis_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+            mostrarAlerta(document.getElementById('alertBackup'), 'Excel exportado!', 'success');
+        }
+
+        function exportarExcelSimulacoes() {
+            const simulacoes = obterSimulacoes();
+
+            if (simulacoes.length === 0) {
+                mostrarAlerta(document.getElementById('alertBackup'), 'Nenhuma simulação para exportar', 'error');
+                return;
+            }
+
+            const dados = simulacoes.map(s => ({
+                'Data': s.data,
+                'Cidade': s.cidade,
+                'Área (m²)': s.area,
+                'Tipo': s.tipo,
+                'Piscina': s.piscina ? 'Sim' : 'Não',
+                'Churrasqueira': s.churrasqueira ? 'Sim' : 'Não',
+                'Valor Mínimo': s.min,
+                'Valor Médio': s.med,
+                'Valor Máximo': s.max,
+                'Comparáveis': s.comparaveis
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Simulações');
+
+            ws['!cols'] = [
+                { wch: 18 }, { wch: 15 }, { wch: 10 }, { wch: 12 },
+                { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+                { wch: 15 }, { wch: 12 }
+            ];
+
+            XLSX.writeFile(wb, `simulacoes_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+            mostrarAlerta(document.getElementById('alertBackup'), 'Excel exportado!', 'success');
+        }
+
+        function exportarBackupCompleto() {
+            const imoveis = obterImoveis();
+            const simulacoes = obterSimulacoes();
+            const backup = {
+                versao: '1.0',
+                data: new Date().toLocaleString('pt-BR'),
+                imoveis,
+                simulacoes
+            };
+
+            const elemento = document.createElement('a');
+            elemento.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
+            elemento.download = `backup_completo_${new Date().toLocaleDateString().replace(/\//g, '-')}.json`;
+            elemento.click();
+
+            mostrarAlerta(document.getElementById('alertBackup'), 'Backup completo exportado!', 'success');
+        }
+
+        function importarBackup() {
+            const file = document.getElementById('importFile').files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const backup = JSON.parse(e.target.result);
+                    
+                    if (backup.imoveis && backup.simulacoes) {
+                        localStorage.setItem('imoveis', JSON.stringify(backup.imoveis || []));
+                        localStorage.setItem('simulacoes', JSON.stringify(backup.simulacoes || []));
+                        
+                        // Sincronizar com Firebase se disponível
+                        if (db) {
+                            backup.imoveis.forEach(i => {
+                                db.ref(`imoveis/${i.id}`).set(i);
+                            });
+                            backup.simulacoes.forEach(s => {
+                                db.ref(`simulacoes/${s.id}`).set(s);
+                            });
+                        }
+                        
+                        renderizarGaleria();
+                        renderizarSimulacoes();
+                        document.getElementById('importFile').value = '';
+                        mostrarAlerta(document.getElementById('alertBackup'), '✅ Backup importado com sucesso!', 'success');
+                    }
+                } catch (err) {
+                    mostrarAlerta(document.getElementById('alertBackup'), '❌ Arquivo inválido', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ========== FILTROS ==========
+        function filtrarPorCidade() {
+            const imoveis = obterImoveis();
+            const cidades = [...new Set(imoveis.map(i => i.cidade))];
+
+            const select = document.getElementById('filtroCity');
+            select.innerHTML = '<option value="">-- Todas as cidades --</option>';
+            cidades.forEach(cidade => {
+                const opt = document.createElement('option');
+                opt.value = cidade;
+                opt.textContent = cidade;
+                select.appendChild(opt);
+            });
+
+            document.getElementById('modalFiltro').style.display = 'block';
+        }
+
+        function aplicarFiltro() {
+            const cidade = document.getElementById('filtroCity').value;
+            fecharModal();
+
+            const imoveis = obterImoveis();
+            const filtrados = cidade ? imoveis.filter(i => i.cidade === cidade) : imoveis;
+
+            const galeria = document.getElementById('galeriaImoveis');
+            const empty = document.getElementById('emptyBanco');
+
+            if (filtrados.length === 0) {
+                galeria.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            galeria.innerHTML = filtrados.map(i => `
+                <div class="card">
+                    <div class="card-image">
+                        ${i.tipo === 'alto' ? '🏰' : i.tipo === 'medio' ? '🏠' : '🏘️'}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-title">${i.cidade}</div>
+                        <div class="card-info">
+                            <span>📍 ${i.condominio || 'S/ condomínio'}</span>
+                        </div>
+                        <div class="card-info">
+                            <span>📐 ${i.area}m²</span>
+                            <span>R$ ${formatarMoeda(i.valor)}</span>
+                        </div>
+                        <div class="card-info">
+                            <span>💰 R$${Math.round(i.valor/i.area)}/m²</span>
+                        </div>
+                        ${i.piscina || i.churrasqueira ? `
+                            <div style="margin-top: 10px;">
+                                ${i.piscina ? '<span class="badge">🏊 Piscina</span>' : ''}
+                                ${i.churrasqueira ? '<span class="badge">🍖 Churrasqueira</span>' : ''}
+                            </div>
+                        ` : ''}
+                        <div class="card-footer">
+                            ${i.link ? `<a href="${i.link}" target="_blank" class="btn btn-secondary" style="text-decoration: none; flex: 1;">🔗 Link</a>` : ''}
+                            <button class="btn btn-danger" onclick="deletarImovel('${i.id}')">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function fecharModal() {
+            document.getElementById('modalFiltro').style.display = 'none';
+        }
+
+        function limparTudo() {
+            if (confirm('ATENÇÃO: Isso deletará TODOS os imóveis cadastrados. Tem certeza?')) {
+                localStorage.setItem('imoveis', JSON.stringify([]));
+                if (db) {
+                    db.ref('imoveis').remove();
+                }
+                renderizarGaleria();
+                mostrarAlerta(document.getElementById('alertBanco'), 'Todos os imóveis foram deletados', 'error');
+            }
+        }
+
+        // ========== UTILITÁRIOS ==========
+        function openTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function formatarMoeda(valor) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(valor);
+        }
+
+        function mostrarAlerta(elemento, mensagem, tipo) {
+            elemento.textContent = mensagem;
+            elemento.className = `alert ${tipo}`;
+            setTimeout(() => {
+                elemento.className = 'alert';
+            }, 4000);
+        }
+
+        // ========== INICIALIZAÇÃO ==========
+        window.addEventListener('load', () => {
+            inicializarFirebase();
+            renderizarGaleria();
+            renderizarSimulacoes();
+        });
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('modalFiltro');
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
+    </script>
+</body>
+</html>
