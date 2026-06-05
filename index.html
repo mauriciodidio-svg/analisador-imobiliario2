@@ -818,17 +818,17 @@
         let firebaseConfigured = false;
 
         function inicializarFirebase() {
-            const config = localStorage.getItem('firebaseConfig');
-            
-            if (!config) {
-                document.getElementById('setupTab').classList.add('active');
-                document.getElementById('estimativa').classList.remove('active');
-                atualizarStatusConexao(false, 'Firebase não configurado');
-                return false;
-            }
+            // Credenciais embutidas no código
+            const firebaseConfig = {
+                apiKey: "AIzaSyBPiS5rCdembeylPxoqn-WEKSM7VqGeQiQ",
+                authDomain: "analisador-imobiliario-674b7.firebaseapp.com",
+                projectId: "analisador-imobiliario-674b7",
+                storageBucket: "analisador-imobiliario-674b7.firebasestorage.app",
+                messagingSenderId: "23801142790",
+                appId: "1:23801142790:web:670d435660376fe029ed87"
+            };
 
             try {
-                const firebaseConfig = JSON.parse(config);
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.database();
                 firebaseConfigured = true;
